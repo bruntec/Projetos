@@ -89,7 +89,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
     $termo_imagem = isset($_POST['termo_imagem']) ? 1 : 0;
 
     $tamanho_camisa = $_POST['tamanho_camisa'] ?? '';
-    if ($tamanho_camisa === 'Outro' && !empty($_POST['tamanho_outro'])) {
+    if ($tamanho_camisa === 'Infantil') {
+        $tam_inf = trim($_POST['tamanho_outro'] ?? '');
+        if (!empty($tam_inf)) {
+            if (stripos($tam_inf, 'infantil') === false) {
+                $tamanho_camisa = 'Infantil ' . $tam_inf;
+            } else {
+                $tamanho_camisa = $tam_inf;
+            }
+        } else {
+            $tamanho_camisa = 'Infantil';
+        }
+    } elseif ($tamanho_camisa === 'Outro' && !empty($_POST['tamanho_outro'])) {
         $tamanho_camisa = trim($_POST['tamanho_outro']);
     }
 
@@ -203,7 +214,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
         .alert.success { background: var(--success-bg); color: #065f46; border: 1px solid #34d399; }
         .alert.error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
         .hidden-field { max-height: 0; overflow: hidden; opacity: 0; transition: all 0.3s ease-in-out; }
-        .hidden-field.show { max-height: 100px; opacity: 1; margin-top: 15px; }
+        .hidden-field.show { max-height: 140px; opacity: 1; margin-top: 15px; }
         .terms-scroll-box { max-height: 180px; overflow-y: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 12px; font-size: 12px; color: var(--text-main); line-height: 1.6; }
         .terms-scroll-box ul { padding-left: 16px; }
         .term-checkbox { display: flex; align-items: flex-start; gap: 12px; background: var(--bg); padding: 12px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 12px; }
@@ -392,10 +403,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
                                 <option value="G" <?= ($p_tam == 'G') ? 'selected' : '' ?>>Tamanho G</option>
                                 <option value="GG" <?= ($p_tam == 'GG') ? 'selected' : '' ?>>Tamanho GG</option>
                                 <option value="XG" <?= ($p_tam == 'XG') ? 'selected' : '' ?>>Tamanho XG</option>
-                                <option value="Outro" <?= ($p_tam == 'Outro') ? 'selected' : '' ?>>Outro (Vou digitar)</option>
+                                <option value="EXG" <?= ($p_tam == 'EXG') ? 'selected' : '' ?>>Tamanho EXG</option>
+                                <option value="G1" <?= ($p_tam == 'G1') ? 'selected' : '' ?>>Tamanho G1</option>
+                                <option value="G2" <?= ($p_tam == 'G2') ? 'selected' : '' ?>>Tamanho G2</option>
+                                <option value="G3" <?= ($p_tam == 'G3') ? 'selected' : '' ?>>Tamanho G3</option>
+                                <option value="Infantil" <?= ($p_tam == 'Infantil' || strpos($p_tam, 'Infantil') === 0) ? 'selected' : '' ?>>🧒 Infantil (digitar o tamanho)</option>
+                                <option value="Outro" <?= ($p_tam == 'Outro') ? 'selected' : '' ?>>Outro (digitar tamanho)</option>
                             </select>
-                            <div id="box-outro-tamanho" class="hidden-field <?= ($p_tam == 'Outro') ? 'show' : '' ?>">
-                                <input type="text" name="tamanho_outro" id="tamanho_outro" class="form-control" placeholder="Digite o tamanho exato (Ex: EXG, Infantil 12)" style="border-color: var(--brand);" value="<?= $p_outro_tam ?>">
+                            <div id="box-outro-tamanho" class="hidden-field <?= ($p_tam == 'Infantil' || strpos($p_tam, 'Infantil') === 0 || $p_tam == 'Outro') ? 'show' : '' ?>">
+                                <label id="label-tamanho-outro" style="font-size: 12px; font-weight: 700; color: var(--brand); display: block; margin-top: 8px; margin-bottom: 4px;">
+                                    <?= ($p_tam == 'Infantil' || strpos($p_tam, 'Infantil') === 0) ? 'Digite o tamanho infantil (ex: 4, 6, 8, 10, 12, 14):' : 'Digite o tamanho específico:' ?>
+                                </label>
+                                <input type="text" name="tamanho_outro" id="tamanho_outro" class="form-control" placeholder="Digite o tamanho infantil (Ex: 4, 6, 8, 10, 12, 14 ou 16)" style="border-color: var(--brand);" value="<?= $p_outro_tam ?>">
                             </div>
                         </div>
                     </div>
@@ -458,10 +477,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
         function toggleOutroTamanho(valor) {
             var boxOutro = document.getElementById('box-outro-tamanho');
             var inputOutro = document.getElementById('tamanho_outro');
-            if (valor === 'Outro') {
+            var labelOutro = document.getElementById('label-tamanho-outro');
+            if (valor === 'Infantil' || valor === 'Outro') {
                 boxOutro.classList.add('show');
                 inputOutro.required = true;
-                setTimeout(() => inputOutro.focus(), 300);
+                if (valor === 'Infantil') {
+                    if (labelOutro) labelOutro.innerText = 'Digite o tamanho infantil (ex: 2, 4, 6, 8, 10, 12, 14 ou 16):';
+                    inputOutro.placeholder = 'Ex: 4, 6, 8, 10, 12, 14 ou 16 anos';
+                } else {
+                    if (labelOutro) labelOutro.innerText = 'Digite o tamanho personalizado:';
+                    inputOutro.placeholder = 'Ex: Baby Look M, Sob Medida, etc.';
+                }
+                setTimeout(() => inputOutro.focus(), 250);
             } else {
                 boxOutro.classList.remove('show');
                 inputOutro.required = false;

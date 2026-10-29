@@ -6,19 +6,19 @@ require 'config.php';
 // 1. AUTO-PATCH E SEGURANÇA AVANÇADA
 // ==========================================
 $check_column_nvl = $conn->query("SHOW COLUMNS FROM usuarios LIKE 'nivel_acesso'");
-if ($check_column_nvl->num_rows == 0) { $conn->query("ALTER TABLE usuarios ADD COLUMN nivel_acesso VARCHAR(30) NOT NULL DEFAULT 'admin'"); }
+if ($check_column_nvl && $check_column_nvl->num_rows == 0) { $conn->query("ALTER TABLE usuarios ADD COLUMN nivel_acesso VARCHAR(30) NOT NULL DEFAULT 'admin'"); }
 
 $check_column_camisa_img = $conn->query("SHOW COLUMNS FROM configuracao_evento LIKE 'imagem_camisa'");
-if ($check_column_camisa_img->num_rows == 0) { $conn->query("ALTER TABLE configuracao_evento ADD COLUMN imagem_camisa VARCHAR(255) DEFAULT NULL"); }
+if ($check_column_camisa_img && $check_column_camisa_img->num_rows == 0) { $conn->query("ALTER TABLE configuracao_evento ADD COLUMN imagem_camisa VARCHAR(255) DEFAULT NULL"); }
 
 $check_column_camisa_tam = $conn->query("SHOW COLUMNS FROM inscritos LIKE 'tamanho_camisa'");
-if ($check_column_camisa_tam->num_rows == 0) { $conn->query("ALTER TABLE configuracao_evento ADD COLUMN tamanho_camisa VARCHAR(50) DEFAULT NULL"); }
+if ($check_column_camisa_tam && $check_column_camisa_tam->num_rows == 0) { $conn->query("ALTER TABLE inscritos ADD COLUMN tamanho_camisa VARCHAR(50) DEFAULT NULL"); }
 
 $check_column_telefone = $conn->query("SHOW COLUMNS FROM inscritos LIKE 'telefone'");
-if ($check_column_telefone->num_rows == 0) { $conn->query("ALTER TABLE inscritos ADD COLUMN telefone VARCHAR(20) DEFAULT ''"); }
+if ($check_column_telefone && $check_column_telefone->num_rows == 0) { $conn->query("ALTER TABLE inscritos ADD COLUMN telefone VARCHAR(20) DEFAULT ''"); }
 
 $check_column_forcar = $conn->query("SHOW COLUMNS FROM usuarios LIKE 'forcar_senha'");
-if ($check_column_forcar->num_rows == 0) { $conn->query("ALTER TABLE usuarios ADD COLUMN forcar_senha TINYINT(1) NOT NULL DEFAULT 0"); }
+if ($check_column_forcar && $check_column_forcar->num_rows == 0) { $conn->query("ALTER TABLE usuarios ADD COLUMN forcar_senha TINYINT(1) NOT NULL DEFAULT 0"); }
 
 $check_status = $conn->query("SHOW COLUMNS FROM configuracao_evento LIKE 'status_inscricoes'");
 if ($check_status && $check_status->num_rows == 0) { $conn->query("ALTER TABLE configuracao_evento ADD COLUMN status_inscricoes TINYINT(1) DEFAULT 1"); }
@@ -31,6 +31,9 @@ if ($check_column_nasc && $check_column_nasc->num_rows == 0) { $conn->query("ALT
 
 $check_column_obs = $conn->query("SHOW COLUMNS FROM inscritos LIKE 'observacoes'");
 if ($check_column_obs && $check_column_obs->num_rows == 0) { $conn->query("ALTER TABLE inscritos ADD COLUMN observacoes TEXT DEFAULT NULL"); }
+
+$check_column_obs_admin = $conn->query("SHOW COLUMNS FROM inscritos LIKE 'observacoes_admin'");
+if ($check_column_obs_admin && $check_column_obs_admin->num_rows == 0) { $conn->query("ALTER TABLE inscritos ADD COLUMN observacoes_admin TEXT DEFAULT NULL"); }
 
 $check_column_dt = $conn->query("SHOW COLUMNS FROM inscritos LIKE 'data_inscricao'");
 if ($check_column_dt && $check_column_dt->num_rows == 0) { $conn->query("ALTER TABLE inscritos ADD COLUMN data_inscricao DATETIME DEFAULT CURRENT_TIMESTAMP"); }
@@ -46,53 +49,75 @@ if ($check_users->num_rows == 0) {
 // ==========================================
 $conn->query("CREATE TABLE IF NOT EXISTS inventario (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    codigo VARCHAR(50) DEFAULT NULL,
     nome VARCHAR(150) NOT NULL,
     categoria VARCHAR(60) NOT NULL DEFAULT 'Cozinha',
     quantidade INT NOT NULL DEFAULT 1,
+    valor DECIMAL(10,2) DEFAULT NULL,
     estado_conservacao VARCHAR(40) NOT NULL DEFAULT 'Bom',
-    local_armazenamento VARCHAR(100) DEFAULT 'Sede UNEC / Cozinha',
+    local_armazenamento VARCHAR(100) DEFAULT 'Mauá',
     responsavel VARCHAR(100) DEFAULT 'Equipe UNEC',
     observacoes TEXT DEFAULT NULL,
     foto VARCHAR(255) DEFAULT NULL,
     data_cadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
     KEY idx_inv_cat (categoria),
-    KEY idx_inv_nome (nome)
+    KEY idx_inv_nome (nome),
+    KEY idx_inv_cod (codigo),
+    KEY idx_inv_local (local_armazenamento)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+// Auto-patch para novas colunas codigo e valor no inventario
+$check_inv_cod = $conn->query("SHOW COLUMNS FROM inventario LIKE 'codigo'");
+if ($check_inv_cod && $check_inv_cod->num_rows == 0) { 
+    $conn->query("ALTER TABLE inventario ADD COLUMN codigo VARCHAR(50) DEFAULT NULL AFTER id"); 
+}
+
+$check_inv_val = $conn->query("SHOW COLUMNS FROM inventario LIKE 'valor'");
+if ($check_inv_val && $check_inv_val->num_rows == 0) { 
+    $conn->query("ALTER TABLE inventario ADD COLUMN valor DECIMAL(10,2) DEFAULT NULL AFTER quantidade"); 
+}
 
 // Seeder Inicial com a Lista de Equipamentos (Janiely Parron)
 $check_inv = $conn->query("SELECT id FROM inventario LIMIT 1");
 if ($check_inv && $check_inv->num_rows == 0) {
     $itens_iniciais = [
-        ['Fogão industrial 4 bocas', 'Cozinha', 1, 'Bom', 'Sede UNEC / Cozinha', 'Janiely Parron', 'Fogão industrial 4 bocas'],
-        ['Fogão industrial 3 bocas', 'Cozinha', 1, 'Bom', 'Sede UNEC / Cozinha', 'Janiely Parron', '1 Fogão industrial 3 bocas'],
-        ['Garrafa de café 1,9L branca', 'Cozinha', 2, 'Bom', 'Sede UNEC / Cozinha', 'Janiely Parron', '2 Garrafas de café 1,9L brancas'],
-        ['Garrafa de café 1,9L preta', 'Cozinha', 2, 'Bom', 'Sede UNEC / Cozinha', 'Janiely Parron', '2 garrafas de café 1,9L pretas'],
-        ['Garrafa de café 1L branca', 'Cozinha', 1, 'Bom', 'Sede UNEC / Cozinha', 'Janiely Parron', '1 garrafa de café 1L branca'],
-        ['Garrafa de café 1L azul', 'Cozinha', 1, 'Bom', 'Sede UNEC / Cozinha', 'Janiely Parron', '1 garrafa de café 1L azul'],
-        ['Garrafa de café 5L azul', 'Cozinha', 2, 'Bom', 'Sede UNEC / Cozinha', 'Janiely Parron', '2 garrafas de café 5L azul'],
-        ['Garrafa de café 5L vermelha', 'Cozinha', 1, 'Bom', 'Sede UNEC / Cozinha', 'Janiely Parron', '1 garrafa de café 5L vermelha'],
-        ['Panela de pressão 20L', 'Cozinha', 2, 'Bom', 'Sede UNEC / Cozinha', 'Janiely Parron', '2 panelas de pressão 20L'],
-        ['Coador de alumínio', 'Cozinha', 1, 'Bom', 'Sede UNEC / Cozinha', 'Janiely Parron', '1 coador de alumínio'],
-        ['Cuscuzeira de alumínio', 'Cozinha', 1, 'Bom', 'Sede UNEC / Cozinha', 'Janiely Parron', '1 cuscuzeira de alumínio'],
-        ['Forma de alumínio', 'Cozinha', 4, 'Bom', 'Sede UNEC / Cozinha', 'Janiely Parron', '4 formas de alumínio'],
-        ['Leiteira', 'Cozinha', 2, 'Bom', 'Sede UNEC / Cozinha', 'Janiely Parron', '2 leiteiras'],
-        ['Escorredor de alumínio', 'Cozinha', 1, 'Bom', 'Sede UNEC / Cozinha', 'Janiely Parron', '1 escorredor de alumínio'],
-        ['Panela de alumínio', 'Cozinha', 12, 'Bom', 'Sede UNEC / Cozinha', 'Janiely Parron', '12 panelas de alumínio'],
-        ['Tina de gelo (caixa térmica)', 'Cozinha', 2, 'Bom', 'Sede UNEC / Cozinha', 'Janiely Parron', '2 tinas de gelo (caixa térmica)'],
-        ['Liquidificador industrial', 'Cozinha', 1, 'Bom', 'Sede UNEC / Cozinha', 'Janiely Parron', '1 liquidificador industrial'],
-        ['Galão de água', 'Cozinha', 2, 'Bom', 'Sede UNEC / Cozinha', 'Janiely Parron', '2 galões de água'],
-        ['Manequim', 'Materiais', 3, 'Bom', 'Depart. Vendas', 'Equipe Vendas', '3 manequins para exibição'],
-        ['Mala do depart. Vendas', 'Materiais', 1, 'Bom', 'Depart. Vendas', 'Equipe Vendas', 'Mala do depart. Vendas'],
-        ['Isopor', 'Materiais', 5, 'Bom', 'Logística & Eventos', 'Janiely Parron', '5 caixas de isopor']
+        ['UNEC-001', 'Fogão industrial 4 bocas', 'Cozinha', 1, 1200.00, 'Bom', 'Mauá', 'Janiely Parron', 'Fogão industrial 4 bocas'],
+        ['UNEC-002', 'Fogão industrial 3 bocas', 'Cozinha', 1, 950.00, 'Bom', 'Mauá', 'Janiely Parron', '1 Fogão industrial 3 bocas'],
+        ['UNEC-003', 'Garrafa de café 1,9L branca', 'Cozinha', 2, 75.00, 'Bom', 'Mauá', 'Janiely Parron', '2 Garrafas de café 1,9L brancas'],
+        ['UNEC-004', 'Garrafa de café 1,9L preta', 'Cozinha', 2, 75.00, 'Bom', 'Mauá', 'Janiely Parron', '2 garrafas de café 1,9L pretas'],
+        ['UNEC-005', 'Garrafa de café 1L branca', 'Cozinha', 1, 45.00, 'Bom', 'Mauá', 'Janiely Parron', '1 garrafa de café 1L branca'],
+        ['UNEC-006', 'Garrafa de café 1L azul', 'Cozinha', 1, 45.00, 'Bom', 'Mauá', 'Janiely Parron', '1 garrafa de café 1L azul'],
+        ['UNEC-007', 'Garrafa de café 5L azul', 'Cozinha', 2, 140.00, 'Bom', 'Mauá', 'Janiely Parron', '2 garrafas de café 5L azul'],
+        ['UNEC-008', 'Garrafa de café 5L vermelha', 'Cozinha', 1, 140.00, 'Bom', 'Mauá', 'Janiely Parron', '1 garrafa de café 5L vermelha'],
+        ['UNEC-009', 'Panela de pressão 20L', 'Cozinha', 2, 380.00, 'Bom', 'Mauá', 'Janiely Parron', '2 panelas de pressão 20L'],
+        ['UNEC-010', 'Coador de alumínio', 'Cozinha', 1, 60.00, 'Bom', 'Mauá', 'Janiely Parron', '1 coador de alumínio'],
+        ['UNEC-011', 'Cuscuzeira de alumínio', 'Cozinha', 1, 90.00, 'Bom', 'Mauá', 'Janiely Parron', '1 cuscuzeira de alumínio'],
+        ['UNEC-012', 'Forma de alumínio', 'Cozinha', 4, 35.00, 'Bom', 'Mauá', 'Janiely Parron', '4 formas de alumínio'],
+        ['UNEC-013', 'Leiteira', 'Cozinha', 2, 40.00, 'Bom', 'Mauá', 'Janiely Parron', '2 leiteiras'],
+        ['UNEC-014', 'Escorredor de alumínio', 'Cozinha', 1, 55.00, 'Bom', 'Mauá', 'Janiely Parron', '1 escorredor de alumínio'],
+        ['UNEC-015', 'Panela de alumínio', 'Cozinha', 12, 110.00, 'Bom', 'Mauá', 'Janiely Parron', '12 panelas de alumínio'],
+        ['UNEC-016', 'Tina de gelo (caixa térmica)', 'Cozinha', 2, 220.00, 'Bom', 'Mauá', 'Janiely Parron', '2 tinas de gelo (caixa térmica)'],
+        ['UNEC-017', 'Liquidificador industrial', 'Cozinha', 1, 680.00, 'Bom', 'Mauá', 'Janiely Parron', '1 liquidificador industrial'],
+        ['UNEC-018', 'Galão de água', 'Cozinha', 2, 30.00, 'Bom', 'Mauá', 'Janiely Parron', '2 galões de água'],
+        ['UNEC-019', 'Manequim', 'Materiais', 3, 120.00, 'Bom', 'Santo André', 'Equipe Vendas', '3 manequins para exibição'],
+        ['UNEC-020', 'Mala do depart. Vendas', 'Materiais', 1, 250.00, 'Bom', 'Santo André', 'Equipe Vendas', 'Mala do depart. Vendas'],
+        ['UNEC-021', 'Isopor', 'Materiais', 5, 45.00, 'Bom', 'Mauá', 'Janiely Parron', '5 caixas de isopor']
     ];
 
-    $stmt_seed = $conn->prepare("INSERT INTO inventario (nome, categoria, quantidade, estado_conservacao, local_armazenamento, responsavel, observacoes) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt_seed = $conn->prepare("INSERT INTO inventario (codigo, nome, categoria, quantidade, valor, estado_conservacao, local_armazenamento, responsavel, observacoes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
     foreach ($itens_iniciais as $it) {
-        $stmt_seed->bind_param("ssissss", $it[0], $it[1], $it[2], $it[3], $it[4], $it[5], $it[6]);
+        $stmt_seed->bind_param("sssidssss", $it[0], $it[1], $it[2], $it[3], $it[4], $it[5], $it[6], $it[7], $it[8]);
         $stmt_seed->execute();
     }
     $stmt_seed->close();
 }
+
+// Atribui códigos patrimoniais sequenciais amigáveis (ex: UNEC-001) para itens antigos sem código
+$conn->query("UPDATE inventario SET codigo = CONCAT('UNEC-', LPAD(id, 3, '0')) WHERE codigo IS NULL OR codigo = ''");
+
+// Normaliza locais antigos para Mauá ou Santo André
+$conn->query("UPDATE inventario SET local_armazenamento = 'Mauá' WHERE local_armazenamento IS NULL OR local_armazenamento = '' OR local_armazenamento LIKE '%Sede%' OR local_armazenamento LIKE '%Logística%'");
+$conn->query("UPDATE inventario SET local_armazenamento = 'Santo André' WHERE local_armazenamento LIKE '%Depart%' OR local_armazenamento LIKE '%Vendas%'");
 
 // ==========================================
 // AUTO-PATCH: TABELA DE ALIMENTOS DA COZINHA (AVANÇO 50 PESSOAS)
@@ -247,7 +272,7 @@ if (isset($_GET['exportar_csv']) && in_array($_SESSION['usuario_nivel'], ['admin
     
     $output = fopen('php://output', 'w');
     fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
-    fputcsv($output, ['ID', 'Nome', 'Data de Nascimento', 'Idade', 'WhatsApp/Tel', 'Documento', 'E-mail', 'Gênero', 'Igreja', 'Pastor', 'Como Conheceu', 'Avanço Anterior', 'Missão Anterior', 'Ministério', 'Acompanhante', 'Observações / Restrições', 'Pagamento Desejado', 'Valor Devido (R$)', 'Valor Pago (R$)', 'Saldo Restante (R$)', 'Tamanho Camiseta', 'Ônibus Designado', 'Poltrona', 'Equipe/Grupo', 'Líder de Equipe', 'Data da Inscrição'], ';');
+    fputcsv($output, ['ID', 'Nome', 'Data de Nascimento', 'Idade', 'WhatsApp/Tel', 'Documento', 'E-mail', 'Gênero', 'Igreja', 'Pastor', 'Como Conheceu', 'Avanço Anterior', 'Missão Anterior', 'Ministério', 'Acompanhante', 'Observações do Voluntário', 'Anotações da Administração (Data Pgto/Acordos)', 'Pagamento Desejado', 'Valor Devido (R$)', 'Valor Pago (R$)', 'Saldo Restante (R$)', 'Tamanho Camiseta', 'Ônibus Designado', 'Poltrona', 'Equipe/Grupo', 'Líder de Equipe', 'Data da Inscrição'], ';');
 
     $res_evt = $conn->query("SELECT valor FROM configuracao_evento WHERE id = 1");
     $evt_d = $res_evt ? $res_evt->fetch_assoc() : null;
@@ -282,7 +307,7 @@ if (isset($_GET['exportar_csv']) && in_array($_SESSION['usuario_nivel'], ['admin
             $dt_ins_fmt = !empty($row['data_inscricao']) ? date('d/m/Y H:i', strtotime($row['data_inscricao'])) : '-';
 
             fputcsv($output, [
-                $row['id'], $row['nome'], $nasc_fmt, $idade_txt, $row['telefone'], $row['documento'], $row['email'], $row['genero'], $row['igreja'], $row['pastor'], $row['como_conheceu'], $row['avanco_anterior'], $row['missao_anterior'], $row['ministerio'], $row['acompanhante'], $row['observacoes'] ?? '', $row['forma_pagamento'],
+                $row['id'], $row['nome'], $nasc_fmt, $idade_txt, $row['telefone'], $row['documento'], $row['email'], $row['genero'], $row['igreja'], $row['pastor'], $row['como_conheceu'], $row['avanco_anterior'], $row['missao_anterior'], $row['ministerio'], $row['acompanhante'], $row['observacoes'] ?? '', $row['observacoes_admin'] ?? '', $row['forma_pagamento'],
                 number_format($v_devido, 2, ',', ''),
                 number_format($v_pago, 2, ',', ''),
                 number_format($saldo, 2, ',', ''),
@@ -304,20 +329,25 @@ if (isset($_GET['exportar_inventario_csv']) && in_array($_SESSION['usuario_nivel
     
     $output = fopen('php://output', 'w');
     fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
-    fputcsv($output, ['ID', 'Item / Equipamento', 'Categoria', 'Quantidade', 'Estado de Conservação', 'Local de Armazenamento', 'Responsável', 'Observações', 'Data Cadastro'], ';');
+    fputcsv($output, ['ID', 'Código', 'Item / Equipamento', 'Categoria', 'Quantidade', 'Valor Unitário (R$)', 'Valor Total (R$)', 'Estado de Conservação', 'Local de Armazenamento', 'Responsável', 'Observações', 'Data Cadastro'], ';');
 
     $res_inv = $conn->query("SELECT * FROM inventario ORDER BY categoria ASC, nome ASC");
     if($res_inv) {
         while ($row = $res_inv->fetch_assoc()) {
+            $v_unit = !empty($row['valor']) ? (float)$row['valor'] : 0.00;
+            $v_tot = $v_unit * (int)$row['quantidade'];
             fputcsv($output, [
                 $row['id'], 
+                $row['codigo'] ?: ('UNEC-' . str_pad($row['id'], 3, '0', STR_PAD_LEFT)),
                 $row['nome'], 
                 $row['categoria'], 
                 $row['quantidade'], 
+                $v_unit > 0 ? number_format($v_unit, 2, ',', '.') : '-',
+                $v_tot > 0 ? number_format($v_tot, 2, ',', '.') : '-',
                 $row['estado_conservacao'], 
                 $row['local_armazenamento'], 
                 $row['responsavel'], 
-                $row['observacoes'],
+                $row['observacoes'] ?? '',
                 date('d/m/Y H:i', strtotime($row['data_cadastro']))
             ], ';');
         }
@@ -458,6 +488,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao'])) {
         $msg_admin = "Tesouraria atualizada com sucesso!";
     }
 
+    if ($acao == 'salvar_observacoes_admin' && in_array($nivel_usuario, ['admin', 'inscricoes'])) {
+        $id_inscrito = (int)$_POST['id_inscrito'];
+        $obs_admin = trim($_POST['observacoes_admin'] ?? '');
+        $stmt = $conn->prepare("UPDATE inscritos SET observacoes_admin = ? WHERE id = ?");
+        $stmt->bind_param("si", $obs_admin, $id_inscrito);
+        $stmt->execute();
+        $stmt->close();
+
+        if (isset($_POST['is_ajax']) && $_POST['is_ajax'] == '1') {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'sucesso' => true,
+                'mensagem' => 'Anotação salva com sucesso!',
+                'id_inscrito' => $id_inscrito,
+                'observacoes_admin' => $obs_admin
+            ]);
+            exit;
+        }
+
+        $msg_admin = "Anotação da administração salva na ficha com sucesso!";
+        $tipo_msg_admin = "success";
+    }
+
     if ($acao == 'excluir_inscrito' && in_array($nivel_usuario, ['admin', 'inscricoes'])) {
         $id_exc = (int)$_POST['id_inscrito'];
         $res = $conn->query("SELECT foto FROM inscritos WHERE id = $id_exc");
@@ -474,13 +527,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao'])) {
     // ==========================================
     if ($acao == 'salvar_item_inventario' && in_array($nivel_usuario, ['admin', 'inscricoes'])) {
         $id_item = !empty($_POST['id_item']) ? (int)$_POST['id_item'] : null;
+        $codigo = trim($_POST['codigo_item'] ?? '');
         $nome = trim($_POST['nome_item']);
         $categoria = trim($_POST['categoria_item'] ?: 'Cozinha');
         $quantidade = max(0, (int)$_POST['quantidade_item']);
+
+        $val_raw = str_replace(['R$', ' ', '.'], '', $_POST['valor_item'] ?? '');
+        $val_raw = str_replace(',', '.', $val_raw);
+        $valor = ($val_raw !== '' && is_numeric($val_raw)) ? number_format((float)$val_raw, 2, '.', '') : null;
+
         $estado = trim($_POST['estado_item'] ?: 'Bom');
-        $local = trim($_POST['local_item'] ?: 'Sede UNEC / Cozinha');
+        $local = trim($_POST['local_item'] ?: 'Mauá');
         $responsavel = trim($_POST['responsavel_item'] ?: 'Equipe UNEC');
         $observacoes = trim($_POST['observacoes_item'] ?? '');
+
+        if (empty($codigo)) {
+            if ($id_item) {
+                $codigo = 'UNEC-' . str_pad($id_item, 3, '0', STR_PAD_LEFT);
+            } else {
+                $res_next = $conn->query("SELECT MAX(id) as max_id FROM inventario");
+                $next_id = ($res_next && $row_next = $res_next->fetch_assoc()) ? ((int)$row_next['max_id'] + 1) : 1;
+                $codigo = 'UNEC-' . str_pad($next_id, 3, '0', STR_PAD_LEFT);
+            }
+        }
 
         $nome_foto = null;
         if (isset($_FILES['foto_item']) && $_FILES['foto_item']['name'] != '') {
@@ -496,22 +565,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao'])) {
 
         if ($id_item) {
             if ($nome_foto) {
-                $stmt = $conn->prepare("UPDATE inventario SET nome=?, categoria=?, quantidade=?, estado_conservacao=?, local_armazenamento=?, responsavel=?, observacoes=?, foto=? WHERE id=?");
-                $stmt->bind_param("ssisssssi", $nome, $categoria, $quantidade, $estado, $local, $responsavel, $observacoes, $nome_foto, $id_item);
+                $stmt = $conn->prepare("UPDATE inventario SET codigo=?, nome=?, categoria=?, quantidade=?, valor=?, estado_conservacao=?, local_armazenamento=?, responsavel=?, observacoes=?, foto=? WHERE id=?");
+                $stmt->bind_param("sssissssssi", $codigo, $nome, $categoria, $quantidade, $valor, $estado, $local, $responsavel, $observacoes, $nome_foto, $id_item);
             } else {
-                $stmt = $conn->prepare("UPDATE inventario SET nome=?, categoria=?, quantidade=?, estado_conservacao=?, local_armazenamento=?, responsavel=?, observacoes=? WHERE id=?");
-                $stmt->bind_param("ssissssi", $nome, $categoria, $quantidade, $estado, $local, $responsavel, $observacoes, $id_item);
+                $stmt = $conn->prepare("UPDATE inventario SET codigo=?, nome=?, categoria=?, quantidade=?, valor=?, estado_conservacao=?, local_armazenamento=?, responsavel=?, observacoes=? WHERE id=?");
+                $stmt->bind_param("sssisssssi", $codigo, $nome, $categoria, $quantidade, $valor, $estado, $local, $responsavel, $observacoes, $id_item);
             }
             $stmt->execute();
             $stmt->close();
-            $msg_admin = "Equipamento '{$nome}' atualizado com sucesso!";
+            $msg_admin = "Equipamento [{$codigo}] '{$nome}' atualizado com sucesso!";
             $tipo_msg_admin = "success";
         } else {
-            $stmt = $conn->prepare("INSERT INTO inventario (nome, categoria, quantidade, estado_conservacao, local_armazenamento, responsavel, observacoes, foto) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("ssisssss", $nome, $categoria, $quantidade, $estado, $local, $responsavel, $observacoes, $nome_foto);
+            $stmt = $conn->prepare("INSERT INTO inventario (codigo, nome, categoria, quantidade, valor, estado_conservacao, local_armazenamento, responsavel, observacoes, foto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("sssissssss", $codigo, $nome, $categoria, $quantidade, $valor, $estado, $local, $responsavel, $observacoes, $nome_foto);
             $stmt->execute();
             $stmt->close();
-            $msg_admin = "Novo equipamento '{$nome}' cadastrado no inventário!";
+            $msg_admin = "Novo equipamento [{$codigo}] '{$nome}' cadastrado no inventário!";
             $tipo_msg_admin = "success";
         }
     }
@@ -1108,6 +1177,9 @@ $categorias_inv = [];
 $qtd_cozinha_inv = 0;
 $qtd_materiais_inv = 0;
 $qtd_manutencao_inv = 0;
+$valor_total_patrimonio = 0.00;
+$qtd_maua = 0;
+$qtd_santo_andre = 0;
 
 $res_inv_all = $conn->query("SELECT * FROM inventario ORDER BY categoria ASC, nome ASC");
 if ($res_inv_all) {
@@ -1125,6 +1197,21 @@ if ($res_inv_all) {
         }
         if (in_array($it['estado_conservacao'], ['Em Manutenção', 'Danificado'])) {
             $qtd_manutencao_inv += $q;
+        }
+
+        // Valor financeiro estimado
+        if (!empty($it['valor'])) {
+            $valor_total_patrimonio += ((float)$it['valor'] * $q);
+        }
+
+        // Quantidade por localidade (Mauá e Santo André)
+        $loc_clean = strtolower($it['local_armazenamento'] ?? '');
+        if (strpos($loc_clean, 'mau') !== false) {
+            $qtd_maua += $q;
+        } elseif (strpos($loc_clean, 'andr') !== false) {
+            $qtd_santo_andre += $q;
+        } else {
+            $qtd_maua += $q; // Padrão Mauá
         }
     }
 }
@@ -1666,7 +1753,8 @@ if ($res_alim_all) {
                         <select id="filtroFinanceiro" onchange="filtrarTabela()" style="width: 100%; padding: 14px 15px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; font-weight: 600; background: #f8fafc; outline: none; cursor: pointer; color: var(--text-main);">
                             <option value="todos">📊 Todos os Status e Tipos</option>
                             <option value="ultimos_10">⭐ Apenas Últimos 10 Cadastrados</option>
-                            <option value="com_obs">📝 Apenas Com Observações / Restrições</option>
+                            <option value="com_obs_admin">📌 Apenas Com Anotações da Admin (Data de Pgto / Avisos)</option>
+                            <option value="com_obs">📝 Apenas Com Observações do Voluntário</option>
                             <option value="pendente">🔴 Apenas Com Saldo Devedor</option>
                             <option value="primeira_vez">🌱 Apenas 1ª Vez (Novatos / Curso)</option>
                             <option value="quitado">🟢 Apenas Quitados (100% Pago)</option>
@@ -1721,7 +1809,11 @@ if ($res_alim_all) {
                                 }
 
                                 $obs_txt = trim($inscrito['observacoes'] ?? '');
-                                $tags_busca = strtolower($inscrito['nome'].' '.$inscrito['documento'].' '.$inscrito['igreja'].' '.$inscrito['telefone'].' '.$txt_min.' '.$nasc_txt.' '.$obs_txt);
+                                $obs_admin_txt = trim($inscrito['observacoes_admin'] ?? '');
+                                $has_obs = !empty($obs_txt);
+                                $has_obs_admin = !empty($obs_admin_txt);
+
+                                $tags_busca = strtolower($inscrito['nome'].' '.$inscrito['documento'].' '.$inscrito['igreja'].' '.$inscrito['telefone'].' '.$txt_min.' '.$nasc_txt.' '.$obs_txt.' '.$obs_admin_txt);
                                 
                                 $status_fin = ($falta == 0) ? 'quitado' : 'pendente';
                                 $is_zerado = ($valor_pago == 0) ? 'sim' : 'nao';
@@ -1731,14 +1823,13 @@ if ($res_alim_all) {
                                 $tag_1a_vez = $is_primeira_vez ? 'sim' : 'nao';
 
                                 $is_recente = in_array((int)$inscrito['id'], $ultimos_cadastrados_ids);
-                                $has_obs = !empty($obs_txt);
 
                                 $tel_limpo = preg_replace('/[^0-9]/', '', $inscrito['telefone'] ?? '');
                                 
                                 $inscrito['valor_devido_calculado'] = $valor_devido;
                                 $json_dados = htmlspecialchars(json_encode($inscrito), ENT_QUOTES, 'UTF-8');
                             ?>
-                            <tr class="linha-inscrito" data-busca="<?= htmlspecialchars($tags_busca) ?>" data-status-fin="<?= $status_fin ?>" data-zerado="<?= $is_zerado ?>" data-primeira-vez="<?= $tag_1a_vez ?>" data-is-recente="<?= $is_recente ? 'sim' : 'nao' ?>" data-has-obs="<?= $has_obs ? 'sim' : 'nao' ?>">
+                            <tr class="linha-inscrito" id="linha-inscrito-<?= $inscrito['id'] ?>" data-busca="<?= htmlspecialchars($tags_busca) ?>" data-status-fin="<?= $status_fin ?>" data-zerado="<?= $is_zerado ?>" data-primeira-vez="<?= $tag_1a_vez ?>" data-is-recente="<?= $is_recente ? 'sim' : 'nao' ?>" data-has-obs="<?= $has_obs ? 'sim' : 'nao' ?>" data-has-obs-admin="<?= $has_obs_admin ? 'sim' : 'nao' ?>">
                                 <td>
                                     <strong><?= htmlspecialchars($inscrito['nome']) ?></strong>
                                     <?php if($is_recente): ?>
@@ -1761,10 +1852,14 @@ if ($res_alim_all) {
                                     <?php endif; ?>
 
                                     <?php if($has_obs): ?>
-                                        <div style="font-size: 11px; color: #92400e; background: #fef3c7; border: 1px solid #fde68a; padding: 2px 6px; border-radius: 4px; margin-top: 4px; line-height: 1.3;" title="<?= htmlspecialchars($obs_txt) ?>">
-                                            📝 <strong>Obs:</strong> <?= htmlspecialchars(mb_strimwidth($obs_txt, 0, 36, '...')) ?>
+                                        <div style="font-size: 11px; color: #92400e; background: #fef3c7; border: 1px solid #fde68a; padding: 2px 6px; border-radius: 4px; margin-top: 4px; line-height: 1.3;" title="Obs do Voluntário: <?= htmlspecialchars($obs_txt) ?>">
+                                            📝 <strong>Voluntário:</strong> <?= htmlspecialchars(mb_strimwidth($obs_txt, 0, 32, '...')) ?>
                                         </div>
                                     <?php endif; ?>
+
+                                    <div id="badge-obs-admin-<?= $inscrito['id'] ?>" style="<?= $has_obs_admin ? '' : 'display:none;' ?> font-size: 11px; color: #9a3412; background: #ffedd5; border: 1.5px solid #fed7aa; padding: 2px 6px; border-radius: 4px; margin-top: 4px; line-height: 1.3; cursor:pointer;" onclick="abrirModal(<?= $json_dados ?>)" title="Clique para abrir a Ficha e editar anotações. Anotação Admin: <?= htmlspecialchars($obs_admin_txt) ?>">
+                                        📌 <strong>Admin:</strong> <span class="badge-obs-texto"><?= htmlspecialchars(mb_strimwidth($obs_admin_txt, 0, 32, '...')) ?></span>
+                                    </div>
                                 </td>
                                 <td>
                                     <span style="font-size:12px; color:var(--text-muted); font-weight:600;">🚌 <?= $txt_bus ?></span><br>
@@ -1860,6 +1955,8 @@ if ($res_alim_all) {
                             bateStatus = isPrimeiraVez;
                         } else if (statusFiltro === 'ultimos_10') {
                             bateStatus = (linha.getAttribute('data-is-recente') === 'sim');
+                        } else if (statusFiltro === 'com_obs_admin') {
+                            bateStatus = (linha.getAttribute('data-has-obs-admin') === 'sim');
                         } else if (statusFiltro === 'com_obs') {
                             bateStatus = (linha.getAttribute('data-has-obs') === 'sim');
                         } else if (statusFiltro === 'quitado') {
@@ -1921,13 +2018,20 @@ if ($res_alim_all) {
                     <h4>Tipos Cadastrados</h4>
                     <div class="number" style="color: #2563eb;"><?= $total_equipamentos_distintos ?> <span style="font-size: 13px; font-weight: normal; color: var(--text-muted);">equipamentos</span></div>
                 </div>
-                <div class="dash-card" style="border-left: 4px solid #f59e0b;">
-                    <h4>🍳 Cozinha & Cantina</h4>
-                    <div class="number" style="color: #d97706;"><?= $qtd_cozinha_inv ?> <span style="font-size: 13px; font-weight: normal; color: var(--text-muted);">unidades</span></div>
+                <div class="dash-card" style="border-left: 4px solid #059669; background: #f0fdf4;">
+                    <h4>💰 Valor Estimado Total</h4>
+                    <div class="number" style="color: #15803d; font-size: 22px;">R$ <?= number_format($valor_total_patrimonio, 2, ',', '.') ?></div>
+                    <span style="font-size: 11px; color: #166534; font-weight:600;">Patrimônio avaliado</span>
                 </div>
-                <div class="dash-card" style="border-left: 4px solid #8b5cf6;">
-                    <h4>🏷️ Materiais & Vendas</h4>
-                    <div class="number" style="color: #7c3aed;"><?= $qtd_materiais_inv ?> <span style="font-size: 13px; font-weight: normal; color: var(--text-muted);">unidades</span></div>
+                <div class="dash-card" style="border-left: 4px solid #0284c7; background: #f0f9ff;">
+                    <h4>📍 Em Mauá</h4>
+                    <div class="number" style="color: #0369a1;"><?= $qtd_maua ?> <span style="font-size: 13px; font-weight: normal; color: var(--text-muted);">unidades</span></div>
+                    <span style="font-size: 11px; color: #0284c7; font-weight:600;">Depósito / Sede Mauá</span>
+                </div>
+                <div class="dash-card" style="border-left: 4px solid #d97706; background: #fffbeb;">
+                    <h4>📍 Em Santo André</h4>
+                    <div class="number" style="color: #b45309;"><?= $qtd_santo_andre ?> <span style="font-size: 13px; font-weight: normal; color: var(--text-muted);">unidades</span></div>
+                    <span style="font-size: 11px; color: #b45309; font-weight:600;">Base Santo André</span>
                 </div>
                 <?php if ($qtd_manutencao_inv > 0): ?>
                     <div class="dash-card" style="border-left: 4px solid #ef4444; background: #fef2f2;">
@@ -1945,7 +2049,7 @@ if ($res_alim_all) {
                             ➕ Cadastrar Novo Equipamento no Inventário
                         </h3>
                         <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">
-                            Preencha os dados do patrimônio para manter o controle de guarda e conferência nos eventos.
+                            Preencha os dados de código, valor e localização para controle de guarda entre Mauá e Santo André.
                         </p>
                     </div>
                     <button type="button" id="btnCancelarEdicaoInv" onclick="cancelarEdicaoInv()" class="btn-ver" style="display: none; color: #dc2626; border-color: #fca5a5;">
@@ -1957,7 +2061,12 @@ if ($res_alim_all) {
                     <input type="hidden" name="acao" value="salvar_item_inventario">
                     <input type="hidden" name="id_item" id="inv_id_item" value="">
 
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 15px;">
+                        <div class="form-group" style="margin-bottom: 10px;">
+                            <label>Código do Produto / Patrimônio</label>
+                            <input type="text" name="codigo_item" id="inv_codigo" placeholder="Ex: UNEC-001 (automático se vazio)" style="font-family: monospace; font-weight: 700; color: #0f172a;">
+                        </div>
+
                         <div class="form-group" style="margin-bottom: 10px;">
                             <label>Nome do Equipamento / Item *</label>
                             <input type="text" name="nome_item" id="inv_nome" required placeholder="Ex: Fogão industrial 4 bocas, Garrafa térmica...">
@@ -1980,6 +2089,11 @@ if ($res_alim_all) {
                         </div>
 
                         <div class="form-group" style="margin-bottom: 10px;">
+                            <label>Valor Unitário Estimado (R$)</label>
+                            <input type="text" name="valor_item" id="inv_valor" placeholder="Ex: 450,00" style="font-weight: 700; color: #15803d;">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 10px;">
                             <label>Estado de Conservação *</label>
                             <select name="estado_item" id="inv_estado" required>
                                 <option value="Bom">🟢 Bom (Pronto para Uso)</option>
@@ -1991,8 +2105,11 @@ if ($res_alim_all) {
                         </div>
 
                         <div class="form-group" style="margin-bottom: 10px;">
-                            <label>Local de Guarda / Armazenamento</label>
-                            <input type="text" name="local_item" id="inv_local" value="Sede UNEC / Cozinha" placeholder="Ex: Sede UNEC, Galpão, Carreta...">
+                            <label>Local de Guarda / Armazenamento *</label>
+                            <select name="local_item" id="inv_local" required style="font-weight: 700; color: #1e3a8a; background: #eff6ff; border-color: #93c5fd;">
+                                <option value="Mauá">📍 Mauá</option>
+                                <option value="Santo André">📍 Santo André</option>
+                            </select>
                         </div>
 
                         <div class="form-group" style="margin-bottom: 10px;">
@@ -2037,6 +2154,13 @@ if ($res_alim_all) {
                     </div>
 
                     <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                        <!-- Filtro de Local (Mauá & Santo André) -->
+                        <select id="filtroLocalInv" onchange="filtrarInventario()" style="padding: 8px 12px; border-radius: 8px; border: 1.5px solid #93c5fd; font-size: 13px; font-weight: 700; background: #eff6ff; color: #1e40af; outline: none; cursor: pointer;">
+                            <option value="todos">📍 Todos os Locais (Mauá & Sto André)</option>
+                            <option value="mauá">📍 Mauá (<?= $qtd_maua ?> un)</option>
+                            <option value="santo andré">📍 Santo André (<?= $qtd_santo_andre ?> un)</option>
+                        </select>
+
                         <select id="filtroCategoriaInv" onchange="filtrarInventario()" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px; font-weight: 600; background: #f8fafc; outline: none;">
                             <option value="todos">Todas as Categorias (<?= count($todos_itens_inv) ?>)</option>
                             <?php foreach ($categorias_inv as $cat_nome => $cat_qtd): ?>
@@ -2057,18 +2181,20 @@ if ($res_alim_all) {
 
                 <div class="search-box" style="margin-bottom: 15px;">
                     <span class="icon">🔍</span>
-                    <input type="text" id="buscaInventario" onkeyup="filtrarInventario()" placeholder="Pesquisar por nome do equipamento, responsável, local ou observações...">
+                    <input type="text" id="buscaInventario" onkeyup="filtrarInventario()" placeholder="Pesquisar por código, nome do equipamento, local (Mauá/Santo André), responsável ou observações...">
                 </div>
 
                 <div style="overflow-x: auto;">
                     <table>
                         <thead>
                             <tr>
+                                <th style="width: 105px;">Código</th>
                                 <th>Equipamento / Descrição</th>
                                 <th>Categoria</th>
                                 <th style="text-align: center;">Quantidade</th>
+                                <th>Valor (R$)</th>
                                 <th>Conservação</th>
-                                <th>Local & Responsável</th>
+                                <th>Local de Guarda</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
@@ -2090,14 +2216,27 @@ if ($res_alim_all) {
                                     elseif (strpos($cat_lower, 'transporte') !== false || strpos($cat_lower, 'logística') !== false) $icone_cat = '🚚';
 
                                     $foto_item = !empty($item['foto']) && file_exists('uploads/' . $item['foto']) ? 'uploads/' . $item['foto'] : null;
+
+                                    $cod_item = !empty($item['codigo']) ? $item['codigo'] : ('UNEC-' . str_pad($item['id'], 3, '0', STR_PAD_LEFT));
+                                    $v_unit = !empty($item['valor']) ? (float)$item['valor'] : 0.00;
+                                    $v_total = $v_unit * (int)$item['quantidade'];
+
+                                    $loc_atual = trim($item['local_armazenamento'] ?? 'Mauá');
+                                    $is_maua = (stripos($loc_atual, 'mau') !== false);
                                 ?>
                                     <tr class="linha-inventario" 
+                                        data-codigo="<?= strtolower(htmlspecialchars($cod_item)) ?>"
                                         data-nome="<?= strtolower(htmlspecialchars($item['nome'])) ?>"
                                         data-categoria="<?= strtolower(htmlspecialchars($item['categoria'])) ?>"
                                         data-estado="<?= strtolower(htmlspecialchars($item['estado_conservacao'])) ?>"
-                                        data-local="<?= strtolower(htmlspecialchars($item['local_armazenamento'])) ?>"
+                                        data-local="<?= strtolower(htmlspecialchars($loc_atual)) ?>"
                                         data-resp="<?= strtolower(htmlspecialchars($item['responsavel'])) ?>"
                                         data-obs="<?= strtolower(htmlspecialchars($item['observacoes'] ?? '')) ?>">
+                                        <td>
+                                            <span style="display: inline-block; background: #0f172a; color: #f8fafc; font-family: monospace; font-size: 11px; font-weight: 700; padding: 3px 7px; border-radius: 6px; letter-spacing: 0.5px;">
+                                                <?= htmlspecialchars($cod_item) ?>
+                                            </span>
+                                        </td>
                                         <td>
                                             <div style="display: flex; align-items: center; gap: 12px;">
                                                 <?php if($foto_item): ?>
@@ -2144,16 +2283,36 @@ if ($res_alim_all) {
                                             </div>
                                         </td>
                                         <td>
+                                            <?php if ($v_unit > 0): ?>
+                                                <div style="font-size: 13px; font-weight: 700; color: #15803d;">
+                                                    R$ <?= number_format($v_unit, 2, ',', '.') ?>
+                                                    <?php if ((int)$item['quantidade'] > 1): ?>
+                                                        <div style="font-size: 11px; color: #166534; font-weight: 600; margin-top: 2px;">
+                                                            Total: R$ <?= number_format($v_total, 2, ',', '.') ?>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php else: ?>
+                                                <span style="font-size: 12px; color: var(--text-muted); font-style: italic;">Não avaliado</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
                                             <span class="badge-estado <?= $css_estado ?>">
                                                 <?= htmlspecialchars($item['estado_conservacao']) ?>
                                             </span>
                                         </td>
                                         <td>
                                             <div style="font-size: 12px;">
-                                                <span style="display: block; color: var(--text-main); font-weight: 600;">
-                                                    📍 <?= htmlspecialchars($item['local_armazenamento']) ?>
-                                                </span>
-                                                <span style="display: block; color: var(--text-muted); margin-top: 2px;">
+                                                <?php if ($is_maua): ?>
+                                                    <span style="display: inline-block; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 12px;">
+                                                        📍 Mauá
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span style="display: inline-block; background: #fef3c7; color: #92400e; border: 1px solid #fde68a; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 12px;">
+                                                        📍 Santo André
+                                                    </span>
+                                                <?php endif; ?>
+                                                <span style="display: block; color: var(--text-muted); margin-top: 3px; font-size: 11px;">
                                                     👤 <?= htmlspecialchars($item['responsavel']) ?>
                                                 </span>
                                             </div>
@@ -2176,7 +2335,7 @@ if ($res_alim_all) {
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                    <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">
                                         Nenhum equipamento cadastrado no momento. Use o formulário acima para adicionar.
                                     </td>
                                 </tr>
@@ -2199,24 +2358,31 @@ if ($res_alim_all) {
                         <tr>
                             <th style="width: 40px; text-align: center;">[ ✔ ] Saída</th>
                             <th style="width: 40px; text-align: center;">[ ✔ ] Retorno</th>
+                            <th style="width: 80px;">Código</th>
                             <th>Equipamento / Material</th>
                             <th>Categoria</th>
-                            <th style="width: 50px; text-align: center;">Qtd</th>
+                            <th style="width: 45px; text-align: center;">Qtd</th>
+                            <th>Valor Unit.</th>
+                            <th>Local Guarda</th>
                             <th>Conservação</th>
-                            <th>Local / Responsável</th>
                             <th>Avarias / Notas</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach($todos_itens_inv as $pi): ?>
+                        <?php foreach($todos_itens_inv as $pi): 
+                            $pi_cod = !empty($pi['codigo']) ? $pi['codigo'] : ('UNEC-' . str_pad($pi['id'], 3, '0', STR_PAD_LEFT));
+                            $pi_val = !empty($pi['valor']) ? ('R$ ' . number_format((float)$pi['valor'], 2, ',', '.')) : '-';
+                        ?>
                             <tr>
                                 <td style="text-align: center; font-size: 14pt;">[ &nbsp; ]</td>
                                 <td style="text-align: center; font-size: 14pt;">[ &nbsp; ]</td>
+                                <td style="font-family: monospace; font-weight: bold;"><?= htmlspecialchars($pi_cod) ?></td>
                                 <td><strong><?= htmlspecialchars($pi['nome']) ?></strong></td>
                                 <td><?= htmlspecialchars($pi['categoria']) ?></td>
                                 <td style="text-align: center; font-weight: bold;"><?= $pi['quantidade'] ?></td>
-                                <td><?= htmlspecialchars($pi['estado_conservacao']) ?></td>
+                                <td><?= $pi_val ?></td>
                                 <td><?= htmlspecialchars($pi['local_armazenamento']) ?></td>
+                                <td><?= htmlspecialchars($pi['estado_conservacao']) ?></td>
                                 <td><?= htmlspecialchars($pi['observacoes'] ?? '') ?></td>
                             </tr>
                         <?php endforeach; ?>
@@ -2243,15 +2409,28 @@ if ($res_alim_all) {
 
                 function editarItemInventario(item) {
                     document.getElementById('inv_id_item').value = item.id;
+                    document.getElementById('inv_codigo').value = item.codigo || ('UNEC-' + String(item.id).padStart(3, '0'));
                     document.getElementById('inv_nome').value = item.nome;
                     document.getElementById('inv_categoria').value = item.categoria || 'Cozinha';
                     document.getElementById('inv_quantidade').value = item.quantidade;
+                    document.getElementById('inv_valor').value = item.valor ? parseFloat(item.valor).toFixed(2).replace('.', ',') : '';
                     document.getElementById('inv_estado').value = item.estado_conservacao || 'Bom';
-                    document.getElementById('inv_local').value = item.local_armazenamento || 'Sede UNEC / Cozinha';
+
+                    var localSelect = document.getElementById('inv_local');
+                    var locVal = item.local_armazenamento || 'Mauá';
+                    if (locVal.toLowerCase().includes('mau')) {
+                        localSelect.value = 'Mauá';
+                    } else if (locVal.toLowerCase().includes('andr')) {
+                        localSelect.value = 'Santo André';
+                    } else {
+                        localSelect.value = 'Mauá';
+                    }
+
                     document.getElementById('inv_responsavel').value = item.responsavel || 'Equipe UNEC';
                     document.getElementById('inv_obs').value = item.observacoes || '';
 
-                    document.getElementById('formInvTitulo').innerHTML = '✏️ Editando: <span style="color:#2563eb;">' + item.nome + '</span>';
+                    var codExib = item.codigo ? '[' + item.codigo + '] ' : '';
+                    document.getElementById('formInvTitulo').innerHTML = '✏️ Editando: <span style="color:#2563eb;">' + codExib + item.nome + '</span>';
                     document.getElementById('btnSalvarInv').innerHTML = '💾 Atualizar Alterações';
                     document.getElementById('btnCancelarEdicaoInv').style.display = 'inline-block';
 
@@ -2260,11 +2439,13 @@ if ($res_alim_all) {
 
                 function cancelarEdicaoInv() {
                     document.getElementById('inv_id_item').value = '';
+                    document.getElementById('inv_codigo').value = '';
                     document.getElementById('inv_nome').value = '';
                     document.getElementById('inv_categoria').value = 'Cozinha';
                     document.getElementById('inv_quantidade').value = '1';
+                    document.getElementById('inv_valor').value = '';
                     document.getElementById('inv_estado').value = 'Bom';
-                    document.getElementById('inv_local').value = 'Sede UNEC / Cozinha';
+                    document.getElementById('inv_local').value = 'Mauá';
                     document.getElementById('inv_responsavel').value = 'Equipe UNEC';
                     document.getElementById('inv_obs').value = '';
 
@@ -2275,6 +2456,7 @@ if ($res_alim_all) {
 
                 function filtrarInventario() {
                     const termo = (document.getElementById('buscaInventario').value || '').toLowerCase();
+                    const localFiltro = (document.getElementById('filtroLocalInv').value || 'todos').toLowerCase();
                     const catFiltro = (document.getElementById('filtroCategoriaInv').value || 'todos').toLowerCase();
                     const estFiltro = (document.getElementById('filtroEstadoInv').value || 'todos').toLowerCase();
 
@@ -2283,6 +2465,7 @@ if ($res_alim_all) {
                     const total = linhas.length;
 
                     linhas.forEach(linha => {
+                        const cod = linha.getAttribute('data-codigo') || '';
                         const nome = linha.getAttribute('data-nome') || '';
                         const cat = linha.getAttribute('data-categoria') || '';
                         const est = linha.getAttribute('data-estado') || '';
@@ -2290,11 +2473,22 @@ if ($res_alim_all) {
                         const resp = linha.getAttribute('data-resp') || '';
                         const obs = linha.getAttribute('data-obs') || '';
 
-                        const bateTexto = !termo || nome.includes(termo) || local.includes(termo) || resp.includes(termo) || obs.includes(termo);
+                        const bateTexto = !termo || cod.includes(termo) || nome.includes(termo) || local.includes(termo) || resp.includes(termo) || obs.includes(termo);
                         const bateCat = (catFiltro === 'todos') || cat.includes(catFiltro);
                         const bateEst = (estFiltro === 'todos') || (est === estFiltro);
+                        
+                        let bateLocal = false;
+                        if (localFiltro === 'todos') {
+                            bateLocal = true;
+                        } else if (localFiltro.includes('mau')) {
+                            bateLocal = local.includes('mau');
+                        } else if (localFiltro.includes('andr')) {
+                            bateLocal = local.includes('andr');
+                        } else {
+                            bateLocal = local.includes(localFiltro);
+                        }
 
-                        if (bateTexto && bateCat && bateEst) {
+                        if (bateTexto && bateCat && bateEst && bateLocal) {
                             linha.style.display = '';
                             visiveis++;
                         } else {
@@ -3672,10 +3866,40 @@ Equipe de Logística & Cozinha — UNEC Missões
                     <div class="ficha-item full"><span>Ônibus/Poltrona</span><strong id="m-poltrona"></strong></div>
                     <div class="ficha-item full"><span>Equipe/Líder</span><strong id="m-equipe"></strong></div>
                 </div>
+                <!-- ANOTAÇÕES DA ADMINISTRAÇÃO & TESOURARIA -->
+                <div class="secao-titulo" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>📝 Anotações Internas da Administração & Tesouraria</span>
+                    <span style="font-size:11px; font-weight:normal; text-transform:none; color:var(--text-muted); background:#f1f5f9; padding:2px 8px; border-radius:4px;">🔒 Restrito à Equipe</span>
+                </div>
+                <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 10px; padding: 14px; margin-bottom: 15px;">
+                    <label for="m-observacoes-admin" style="display: block; font-size: 12px; font-weight: 700; color: #92400e; margin-bottom: 6px;">
+                        📌 Observações & Acordos da Equipe (Ex: Data que vai pagar, carona, autorizações):
+                    </label>
+                    <textarea id="m-observacoes-admin" rows="3" placeholder="Ex: 'Prometeu pagar no dia 15/11 via PIX', 'Entrada de R$ 50 paga, restante acerta no embarque', 'Autorizado desconto especial pela liderança'..." style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #f59e0b; font-size: 13px; font-family: inherit; resize: vertical; outline: none; background: #fff; box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);"></textarea>
+
+                    <!-- Atalhos Rápidos -->
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; align-items: center;">
+                        <span style="font-size: 11px; color: #b45309; font-weight: 600;">Atalhos rápidos:</span>
+                        <button type="button" onclick="adicionarAtalhoObs('📅 Prometeu pagar dia ')" class="btn-ver" style="padding: 3px 8px; font-size: 11px; background: #fff; color: #92400e; border-color: #fcd34d;">+ 📅 Vai pagar dia...</button>
+                        <button type="button" onclick="adicionarAtalhoObs('💵 Paga na saída / embarque')" class="btn-ver" style="padding: 3px 8px; font-size: 11px; background: #fff; color: #92400e; border-color: #fcd34d;">+ 💵 Paga na saída</button>
+                        <button type="button" onclick="adicionarAtalhoObs('⏳ Aguardando envio do PIX')" class="btn-ver" style="padding: 3px 8px; font-size: 11px; background: #fff; color: #92400e; border-color: #fcd34d;">+ ⏳ Aguardando PIX</button>
+                        <button type="button" onclick="adicionarAtalhoObs('✅ Acordo autorizado pela diretoria')" class="btn-ver" style="padding: 3px 8px; font-size: 11px; background: #fff; color: #92400e; border-color: #fcd34d;">+ ✅ Acordo autorizado</button>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; flex-wrap: wrap; gap: 10px; border-top: 1px dashed #fde68a; padding-top: 10px;">
+                        <span id="m-obs-admin-status" style="font-size: 12px; font-weight: 700; color: #16a34a; display: none;"></span>
+                        <div style="margin-left: auto;">
+                            <button type="button" onclick="salvarObsAdminModal()" id="btnSalvarObsAdmin" class="btn-acao" style="background: #d97706; color: #fff; padding: 8px 18px; font-size: 13px; font-weight: 700; border-radius: 6px; box-shadow: 0 2px 4px rgba(217, 119, 6, 0.25);">
+                                💾 Salvar Anotação na Ficha
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="secao-titulo">Observações & Restrições do Voluntário</div>
                 <div class="ficha-grid">
                     <div class="ficha-item full">
-                        <span>Alergias / Problemas de Saúde / Informações Importantes</span>
+                        <span>Alergias / Problemas de Saúde / Informações Preenchidas no Formulário</span>
                         <div id="m-observacoes" style="margin-top: 6px; font-size: 13px; line-height: 1.5; color: #1e293b; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; white-space: pre-wrap;"></div>
                     </div>
                 </div>
@@ -3688,7 +3912,11 @@ Equipe de Logística & Cozinha — UNEC Missões
             window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(err => { console.log('PWA Falhou', err); }); });
         }
 
+        var dadosInscritoAtualModal = null;
+
         function abrirModal(dados) {
+            dadosInscritoAtualModal = dados;
+
             document.getElementById('m-nome').innerText = dados.nome || '-';
             document.getElementById('m-telefone').innerText = dados.telefone || 'Não informado'; 
             document.getElementById('m-genero').innerText = dados.genero || '-';
@@ -3727,7 +3955,18 @@ Equipe de Logística & Cozinha — UNEC Missões
                 document.getElementById('m-data-inscricao').innerText = '-';
             }
 
-            // Observações
+            // Anotações da Administração
+            var campoObsAdmin = document.getElementById('m-observacoes-admin');
+            if (campoObsAdmin) {
+                campoObsAdmin.value = dados.observacoes_admin || '';
+            }
+            var statusObsAdmin = document.getElementById('m-obs-admin-status');
+            if (statusObsAdmin) {
+                statusObsAdmin.style.display = 'none';
+                statusObsAdmin.innerText = '';
+            }
+
+            // Observações do Voluntário
             var obsElem = document.getElementById('m-observacoes');
             if (dados.observacoes && dados.observacoes.trim() !== '') {
                 obsElem.innerText = dados.observacoes;
@@ -3769,6 +4008,88 @@ Equipe de Logística & Cozinha — UNEC Missões
 
             document.getElementById('modalFicha').style.display = 'flex';
         }
+
+        function adicionarAtalhoObs(texto) {
+            var campo = document.getElementById('m-observacoes-admin');
+            if (!campo) return;
+            if (campo.value.trim() !== '') {
+                campo.value = campo.value.trim() + ' | ' + texto;
+            } else {
+                campo.value = texto;
+            }
+            campo.focus();
+        }
+
+        function salvarObsAdminModal() {
+            if (!dadosInscritoAtualModal || !dadosInscritoAtualModal.id) {
+                alert('Erro: nenhum voluntário selecionado.');
+                return;
+            }
+            var idInscrito = dadosInscritoAtualModal.id;
+            var novoTexto = document.getElementById('m-observacoes-admin').value.trim();
+            var btn = document.getElementById('btnSalvarObsAdmin');
+            var statusElem = document.getElementById('m-obs-admin-status');
+
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Salvando...';
+
+            var formData = new FormData();
+            formData.append('acao', 'salvar_observacoes_admin');
+            formData.append('id_inscrito', idInscrito);
+            formData.append('observacoes_admin', novoTexto);
+            formData.append('is_ajax', '1');
+
+            fetch('?aba=inscritos', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = '💾 Salvar Anotação na Ficha';
+                if (data && data.sucesso) {
+                    dadosInscritoAtualModal.observacoes_admin = novoTexto;
+
+                    statusElem.style.display = 'inline-block';
+                    statusElem.style.color = '#16a34a';
+                    statusElem.innerText = '✅ Anotação salva com sucesso!';
+                    setTimeout(() => {
+                        if (statusElem) statusElem.style.display = 'none';
+                    }, 4000);
+
+                    // Atualiza o crachá/badge na tabela
+                    var badgeElem = document.getElementById('badge-obs-admin-' + idInscrito);
+                    if (badgeElem) {
+                        if (novoTexto !== '') {
+                            var resumo = novoTexto.length > 32 ? novoTexto.substring(0, 32) + '...' : novoTexto;
+                            var txtSpan = badgeElem.querySelector('.badge-obs-texto');
+                            if (txtSpan) txtSpan.innerText = resumo;
+                            badgeElem.setAttribute('title', 'Clique para abrir a Ficha e editar anotações. Anotação Admin: ' + novoTexto);
+                            badgeElem.style.display = 'block';
+                        } else {
+                            badgeElem.style.display = 'none';
+                        }
+                    }
+
+                    // Atualiza os atributos da linha
+                    var linha = document.getElementById('linha-inscrito-' + idInscrito);
+                    if (linha) {
+                        linha.setAttribute('data-has-obs-admin', novoTexto !== '' ? 'sim' : 'nao');
+                        var buscaAtual = linha.getAttribute('data-busca') || '';
+                        linha.setAttribute('data-busca', buscaAtual + ' ' + novoTexto.toLowerCase());
+                    }
+                } else {
+                    alert('Erro ao salvar anotação. Tente novamente.');
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = '💾 Salvar Anotação na Ficha';
+                console.error(err);
+                alert('Erro de conexão ao salvar.');
+            });
+        }
+
         function fecharModal() { document.getElementById('modalFicha').style.display = 'none'; }
         window.onclick = function(event) { var modal = document.getElementById('modalFicha'); if (event.target == modal) { modal.style.display = "none"; } }
     </script>
